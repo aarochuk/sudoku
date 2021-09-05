@@ -6,7 +6,7 @@ def new_board(diff=1):
              [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0],
              [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
-    data = requests.get(f'http://www.cs.utep.edu/cheon/ws/sudoku/new/?level={diff}&size=9').json()['squares']
+    data = requests.get(f'https://sudoku--api.herokuapp.com/new-board?diff={diff}').json()['squares']
     for i in data:
         board[i['x']][i['y']] = i['value']
 
