@@ -1,13 +1,137 @@
 import pygame, sys, copy
-from get_board import new_board
-from sudoku_solver import _solve
+import requests
+from time import sleep
 
-board = new_board()
-second = copy.deepcopy(board)
-solu_board = copy.deepcopy(board)
-_solve(solu_board)
+def new_board(diff=1):
+    board = requests.get(f'https://sudoku--api.herokuapp.com/new-board?diff={diff}').json()['response']['unsolved-sudoku']
 
-text_r = [[], [], [], [], [], [], [], [], []]
+    return board
+
+
+class Sudoku():
+    def __init__(self, diff=1):
+        self.org = new_board(diff)
+        self.second = copy.deepcopy(self.org)
+        self.solu_board = copy.deepcopy(self.org)
+        self._solve()
+
+        self.text_r = [[], [], [], [], [], [], [], [], []]
+
+    def find_next(self):
+        for y in range(9):
+            for x in range(9):
+                if self.solu_board[y][x] == 0:
+                    return y, x
+        return None
+
+    def valid(self, n, y, x):
+        for i in range(9):
+            if self.solu_board[y][i] == n:
+                return False
+        for i in range(9):
+            if self.solu_board[i][x] == n:
+                return False
+        x_ = (x // 3) * 3
+        y_ = (y // 3) * 3
+        for i in range(3):
+            for j in range(3):
+                if self.solu_board[y_ + i][x_ + j] == n:
+                    return False
+        return True
+
+    def _solve(self):
+        find = self.find_next()
+        if find:
+            col, row = find
+        else:
+            return True
+        for i in range(1, 10):
+            if self.valid(i, col, row):
+                self.solu_board[col][row] = i
+                if self._solve():
+                    return True
+                self.solu_board[col][row] = 0
+        return
+
+    def fn(self):
+        for y in range(9):
+            for x in range(9):
+                if self.org[y][x] == 0:
+                    return y, x
+        return None
+
+    def v(self, n, y, x):
+        for i in range(9):
+            if self.org[y][i] == n:
+                return False
+        for i in range(9):
+            if self.org[i][x] == n:
+                return False
+        x_ = (x // 3) * 3
+        y_ = (y // 3) * 3
+        for i in range(3):
+            for j in range(3):
+                if self.org[y_ + i][x_ + j] == n:
+                    return False
+        return True
+
+    def _s(self):
+        find = self.fn()
+        if find:
+            col, row = find
+        else:
+            return True
+        for i in range(1, 10):
+            if self.v(i, col, row):
+                self.org[col][row] = i
+                pygame.time.delay(60)
+                self.draw_grid()
+                if self._s():
+                    return True
+                self.org[col][row] = 0
+                pygame.time.delay(60)
+                self.draw_grid()
+        return
+
+    def restart(self):
+        self.org = copy.deepcopy(self.second)
+
+    def draw_grid(self):
+        x_const = 0
+        y_const = 0
+        for i in range(9):
+            for j in range(9):
+
+                self.text_r[i].append(pygame.Rect(305 + (j * 67) + x_const, 5 + (i * 67) + y_const, 67, 67))
+                if (j + 1) % 3 == 0:
+                    x_const += 5
+                else:
+                    x_const += 1
+                center = list(self.text_r[i][j].center)
+                center[0] -= 5
+                center[1] -= 15
+
+                if board.second[i][j] == 0:
+                    pygame.draw.rect(screen, (211, 211, 211), self.text_r[i][j])
+                else:
+                    pygame.draw.rect(screen, (255, 255, 255), self.text_r[i][j])
+
+                if board.org[i][j] != 0:
+                    screen.blit(game_font.render(str(self.org[i][j]), False, (0)), center)
+
+                if board.second[i][j] == 0:
+                    if self.org[i][j] != 0 and self.org[i][j] == self.solu_board[i][j]:
+                        screen.blit(game_font.render(str(self.org[i][j]), False, (0)), center)
+                    elif board.org[i][j] != 0 and board.org[i][j] != self.solu_board[i][j]:
+                        screen.blit(game_font.render(str(self.org[i][j]), False, (255, 0, 0)), center)
+
+            if (i + 1) % 3 == 0:
+                y_const += 5
+            else:
+                y_const += 1
+            x_const = 0
+        pygame.display.flip()
+
 
 pygame.init()
 
@@ -26,6 +150,7 @@ restart = pygame.Rect(20, 340, 260, 60)
 solve = pygame.Rect(20, 420, 260, 60)
 exit_game = pygame.Rect(20, 500, 260, 60)
 
+board = Sudoku()
 
 def draw_menu(mode='easy'):
     pygame.draw.rect(screen, (255, 255, 255), settings)
@@ -62,42 +187,6 @@ def draw_menu(mode='easy'):
     screen.blit(exit_, (129, 515))
 
 
-def draw_grid(grid, org):
-    x_const = 0
-    y_const = 0
-    for i in range(9):
-        for j in range(9):
-
-            text_r[i].append(pygame.Rect(305+(j * 67)+x_const, 5+(i * 67)+y_const, 67, 67))
-            if (j + 1) % 3 == 0:
-                x_const += 5
-            else:
-                x_const += 1
-            center = list(text_r[i][j].center)
-            center[0] -= 5
-            center[1] -= 15
-
-            if org[i][j] == 0:
-                pygame.draw.rect(screen, (211, 211, 211), text_r[i][j])
-            else:
-                pygame.draw.rect(screen, (255, 255, 255), text_r[i][j])
-
-            if grid[i][j] != 0:
-                screen.blit(game_font.render(str(grid[i][j]), False, (0)), center)
-
-            if second[i][j] == 0:
-                if grid[i][j] != 0 and grid[i][j] == solu_board[i][j]:
-                    screen.blit(game_font.render(str(grid[i][j]), False, (0)), center)
-                elif grid[i][j] != 0 and grid[i][j] != solu_board[i][j]:
-                    screen.blit(game_font.render(str(grid[i][j]), False, (255,0,0)), center)
-
-        if (i+1) % 3 == 0:
-            y_const += 5
-        else:
-            y_const += 1
-        x_const = 0
-
-
 time = "00:00:00"
 mode = 'easy'
 
@@ -117,6 +206,7 @@ comp_solved = False
 over = False
 
 editable = True
+pygame.display.flip()
 
 while True:
     for event in pygame.event.get():
@@ -138,7 +228,6 @@ while True:
             key = event.key % 48 if event.key >= 48 and event.key <= 58 else 0
 
     draw_menu(mode)
-    draw_grid(board, second)
     if not over:
         screen.blit(game_font.render(time, False, (0)), (100, 280))
     else:
@@ -150,21 +239,21 @@ while True:
             editable = True
             over = False
             mode = 'easy'
-            board = new_board()
+            board = Sudoku()
             timer_started = False
             comp_solved = False
-            second = copy.deepcopy(board)
             left_click = False
+
 
         elif medium_mode.collidepoint(mx, my):
             editable = True
             over = False
             mode = 'medium'
-            board = new_board(2)
+            board = Sudoku(2)
             timer_started = False
             comp_solved = False
-            second = copy.deepcopy(board)
             left_click = False
+
 
         elif hard_mode.collidepoint(mx, my):
             editable = True
@@ -172,14 +261,13 @@ while True:
             mode = 'hard'
             timer_started = False
             comp_solved = False
-            board = new_board(3)
-            second = copy.deepcopy(board)
+            board = Sudoku(3)
             left_click = False
 
         elif restart.collidepoint(mx, my):
             editable = True
             over = False
-            board = copy.deepcopy(second)
+            board.restart()
             comp_solved = False
             timer_started = False
             left_click = False
@@ -189,15 +277,20 @@ while True:
             sys.exit()
 
         elif solve.collidepoint(mx, my):
-            #TODO: Show whats going on in solve
-            comp_solved = True
-            board = solu_board
+            editable = False
+            board._s()
             left_click = False
+            a_key = False
+            key = 0
+            timer_started = False
+
+        elif not editable:
+            key = 0
 
         else:
             for i in range(9):
                 for j in range(9):
-                    if editable and second[i][j] == 0 and text_r[i][j].collidepoint(mx, my):
+                    if editable and board.second[i][j] == 0 and board.text_r[i][j].collidepoint(mx, my):
                         if not timer_started:
                             start_time = pygame.time.get_ticks()
                             milliseconds = 0
@@ -207,7 +300,7 @@ while True:
                             timer_started = True
 
                         if a_key:
-                            board[i][j] = key
+                            board.org[i][j] = key
                             a_key = False
                             key = 0
 
@@ -237,9 +330,10 @@ while True:
     else:
         time = f'00:00:00'
 
-    if board == solu_board and not comp_solved:
+    if board == board.solu_board and not comp_solved:
         over = True
         time = 'Solved in: ' + last_time
         editable = False
 
-    pygame.display.flip()
+    board.draw_grid()
+
