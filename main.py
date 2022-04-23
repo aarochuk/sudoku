@@ -2,6 +2,7 @@ import pygame, sys, copy
 import requests
 from time import sleep
 
+
 def new_board(diff=1):
     board = requests.get(f'https://sudoku--api.herokuapp.com/new-board?diff={diff}').json()['response']['unsolved-sudoku']
 
@@ -151,6 +152,7 @@ solve = pygame.Rect(20, 420, 260, 60)
 exit_game = pygame.Rect(20, 500, 260, 60)
 
 board = Sudoku()
+
 
 def draw_menu(mode='easy'):
     pygame.draw.rect(screen, (255, 255, 255), settings)
